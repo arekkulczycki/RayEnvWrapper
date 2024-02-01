@@ -142,7 +142,17 @@ class _RemoteSingleAgentEnv:
     """Wrapper class for making a gym env a remote actor."""
 
     def __init__(self, make_env, i, env_per_worker):
-        self.env = DummyVecEnv([lambda: make_env((i * env_per_worker) + k) for k in range(env_per_worker)])
+        models = []
+        color_ext = "Black" if color else "White"
+        for model_version in ["A", "B", "C", "D", "E", "F"]:
+            path = f"Hex9{color_ext}{model_version}.onnx"
+            models.append(
+                ort.InferenceSession(
+                    path, providers=["OpenVINOExecutionProvider"]
+                )
+            )
+
+        self.env = DummyVecEnv([lambda: make_env((i * env_per_worker) + k, models) for k in range(env_per_worker)])
 
     def reset(self):
         return self.env.reset(), 0, False, {}
