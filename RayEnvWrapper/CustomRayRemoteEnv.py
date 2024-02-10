@@ -1,6 +1,6 @@
 import logging
 from copy import deepcopy
-from typing import Tuple, Callable, Optional
+from typing import Tuple, Callable, Dict, Optional
 from collections import OrderedDict
 
 import numpy as np
@@ -26,7 +26,7 @@ class CustomRayRemoteVectorEnv(BaseEnv):
     """
 
     def __init__(self, make_env: Callable[[int], EnvType], num_workers: int, env_per_worker: int,
-                 multiagent: bool):
+                 multiagent: bool, agent_kwargs: Dict):
         self.make_local_env = make_env
         self.local_env = make_env(0)
         self.num_workers = num_workers
@@ -47,6 +47,8 @@ class CustomRayRemoteVectorEnv(BaseEnv):
         self.buf_rews = np.zeros((self.num_envs,), dtype=np.float32)
         self.buf_infos = [{} for _ in range(self.num_envs)]
 
+        self.agent_kwargs = agent_kwargs
+
     def _save_obs(self, env_idx: int, obs: VecEnvObs) -> None:
         for key in self.keys:
             if key is None:
@@ -64,7 +66,7 @@ class CustomRayRemoteVectorEnv(BaseEnv):
                 if self.multiagent:
                     return _RemoteMultiAgentEnv.remote(self.make_local_env, i, self.env_per_worker)
                 else:
-                    return _RemoteSingleAgentEnv.remote(self.make_local_env, i, self.env_per_worker)
+                    return _RemoteSingleAgentEnv.remote(self.make_local_env, i, self.env_per_worker, **self.agent_kwargs)
 
             self.actors = [make_remote_env(i) for i in range(self.num_workers)]
 
@@ -141,7 +143,7 @@ class _RemoteMultiAgentEnv:
 class _RemoteSingleAgentEnv:
     """Wrapper class for making a gym env a remote actor."""
 
-    def __init__(self, make_env, i, env_per_worker):
+    def __init__(self, make_env, i, env_per_worker, *, color):
         models = []
         color_ext = "Black" if color else "White"
         for model_version in ["A", "B", "C", "D", "E", "F"]:

@@ -10,11 +10,11 @@ import RayEnvWrapper
 
 class WrapperRayVecEnv(VecEnv):
 
-    def __init__(self, make_env, num_workers, per_worker_env):
+    def __init__(self, make_env, num_workers, per_worker_env, agent_kwargs):
         self.n_envs = num_workers * per_worker_env
 
         self.one_env = make_env(0)
-        self.remote: BaseEnv = RayEnvWrapper.CustomRayRemoteVectorEnv(make_env, num_workers, per_worker_env, False)
+        self.remote: BaseEnv = RayEnvWrapper.CustomRayRemoteVectorEnv(make_env, num_workers, per_worker_env, False, agent_kwargs)
         super().__init__(self.n_envs, self.one_env.observation_space, self.one_env.action_space)
 
     def reset(self) -> VecEnvObs:
